@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - develop
-
   pull_request:
     branches:
       - develop
@@ -29,4 +28,4 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        run: dotnet test ./LocalGuide.Tests/LocalGuide.Tests.csproj --no-build --configuration Release --verbosity normal
