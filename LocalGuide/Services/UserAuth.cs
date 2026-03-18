@@ -29,6 +29,7 @@ namespace LocalGuide.Services
             _jwtSecret = jwtSecret;
         }
 
+
         /// <summary>
         /// Hashes a plain-text password using a salted SHA-256 approach
         /// (in production, replace with BCrypt.Net-Next or ASP.NET Identity).
