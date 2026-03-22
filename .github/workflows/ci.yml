@@ -1,0 +1,76 @@
+name: CI + Quality + Review Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, review_requested, edited]
+    branches: [develop]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+      - run: dotnet restore
+      - run: dotnet build --no-restore --configuration Release
+      - run: dotnet test ./LocalGuide.Tests/LocalGuide.Tests.csproj --no-build --configuration Release --collect:"XPlat Code Coverage"
+
+  analysis:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Code Review Check (require APPROVED)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            const approved = reviews.some(review => review.state === 'APPROVED');
+            if (!approved) {
+              core.setFailed("Код-рев’ю не схвалено! Потрібен хоча б один APPROVED review.");
+            }
+
+      - name: Count lines of code with Cloc
+        run: |
+          sudo apt-get update && sudo apt-get install -y cloc
+          cloc --include-lang=C#,XML,JSON,YAML . > cloc-report.txt
+          cat cloc-report.txt
+
+      - name: Setup .NET for SonarQube
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Begin SonarQube analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet sonarscanner begin \
+            /k:"LocalGuide" \
+            /d:sonar.host.url="http://localhost:9000" \
+            /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.cs.vscoveragexml.reportsPaths="**/coverage.opencover.xml"
+
+      - name: Build & Test with coverage
+        run: dotnet test ./LocalGuide.Tests/LocalGuide.Tests.csproj --no-build --configuration Release --collect:"XPlat Code Coverage"
+
+      - name: End SonarQube analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+
+      - name: Check code style (dotnet format) — аналог Reviewdog + Black
+        run: dotnet format --verify-no-changes --severity error
