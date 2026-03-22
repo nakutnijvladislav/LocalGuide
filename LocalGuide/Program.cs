@@ -39,7 +39,6 @@ namespace LocalGuide
             };
 
 
-
             // 2. Створення екземплярів сервісів
             var locationService = new LocationService(initialData);
             var authService = new UserAuth("my-very-secure-secret-key-123");
