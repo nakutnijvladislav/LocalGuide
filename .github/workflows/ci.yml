@@ -54,15 +54,14 @@ jobs:
       - name: Install SonarScanner
         run: dotnet tool install --global dotnet-sonarscanner
 
-      - name: Begin SonarQube analysis
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          args: >
+            -Dsonar.projectKey=nakutnijvladislav_LocalGuide
+            -Dsonar.organization=nakutnijvladislav
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          dotnet sonarscanner begin \
-            /k:"LocalGuide" \
-            /d:sonar.host.url="http://localhost:9000" \
-            /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
-            /d:sonar.cs.vscoveragexml.reportsPaths="**/coverage.opencover.xml"
 
       - name: Build & Test with coverage
         run: dotnet test ./LocalGuide.Tests/LocalGuide.Tests.csproj --no-build --configuration Release --collect:"XPlat Code Coverage"
