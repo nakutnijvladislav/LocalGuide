@@ -4,6 +4,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, review_requested, edited]
     branches: [develop]
+  push:
+    branches:
+      - master  # додаємо запуск для master
 
 jobs:
   build-and-test:
@@ -54,9 +57,19 @@ jobs:
       - name: Install SonarScanner
         run: dotnet tool install --global dotnet-sonarscanner
 
+      # Визначаємо гілку для аналізу
+      - name: Set branch name
+        id: vars
+        run: echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
       # Початок аналізу SonarCloud
       - name: SonarCloud Begin Analysis
-        run: dotnet sonarscanner begin /k:"nakutnijvladislav_LocalGuide" /o:"nakutnijvladislav" /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+        run: |
+          dotnet sonarscanner begin \
+            /k:"nakutnijvladislav_LocalGuide" \
+            /o:"nakutnijvladislav" \
+            /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.branch.name="$BRANCH_NAME"
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
